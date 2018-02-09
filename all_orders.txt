@@ -1,0 +1,103 @@
+select
+o.ready_time,
+EXTRACT(MONTH from o.ready_time) as `Month`,
+EXTRACT(WEEK from o.ready_time) as `Week`,
+EXTRACT(YEAR from o.ready_time) as `Year`,
+o.order_number,
+case when (c_transport.name like '%Lotte%') then 'LotteMart Wholesale'
+    when (c_shipper.name like '%Samator%') then 'Samator'
+    when (c_shipper.name like '%Perffeti%') then 'Perffeti Van Melle'
+    else 'others' end as Account,
+c_shipper.name as shipper,
+c_transport.name as transporter,
+o.origin_contact_name,
+o.logistic_fee,
+o.fee,
+lotpay.confirmed_fee,
+lotpay.correction_fee,
+case 
+	when c_transport.name like '%Lotte%' then 
+		(
+      case when (
+        greatest (case when o.fee is null then 0
+          else o.fee end, 
+          case when lotpay.confirmed_fee is null then 0
+          else lotpay.confirmed_fee end, 
+          case when lotpay.correction_fee is null then 0
+          else lotpay.correction_fee end) > 50000000
+          ) then (
+            greatest (case when o.fee is null then 0
+                else o.fee end, 
+                case when lotpay.confirmed_fee is null then 0
+                else lotpay.confirmed_fee end)
+          )
+          else (
+            greatest (case when o.fee is null then 0
+          else o.fee end, 
+          case when lotpay.confirmed_fee is null then 0
+          else lotpay.confirmed_fee end, 
+          case when lotpay.correction_fee is null then 0
+          else lotpay.correction_fee end)
+          )end
+    )
+	when c_shipper.name like '%Samator%' then
+		(
+			5000
+		)
+	when c_shipper.name like '%Perffeti%' then
+		(
+			15000
+		)
+	else 0 end as GTV,
+case 
+	when c_transport.name like '%Lotte%' then 
+		0.1*(
+      case when (
+        greatest (case when o.fee is null then 0
+          else o.fee end, 
+          case when lotpay.confirmed_fee is null then 0
+          else lotpay.confirmed_fee end, 
+          case when lotpay.correction_fee is null then 0
+          else lotpay.correction_fee end) > 50000000
+          ) then (
+            greatest (case when o.fee is null then 0
+                else o.fee end, 
+                case when lotpay.confirmed_fee is null then 0
+                else lotpay.confirmed_fee end)
+          )
+          else (
+            greatest (case when o.fee is null then 0
+          else o.fee end, 
+          case when lotpay.confirmed_fee is null then 0
+          else lotpay.confirmed_fee end, 
+          case when lotpay.correction_fee is null then 0
+          else lotpay.correction_fee end)
+          )end
+    )
+	when c_shipper.name like '%Samator%' then
+		(
+			5000
+		)
+	when c_shipper.name like '%Perffeti%' then
+		(
+			15000
+		)
+	else 0 end as GMV,
+o.total_dimension,
+o.total_load,
+v_t.name as vehicleType,
+s.name as orderStatus,
+trips.status as statusTrip
+
+from `ritase-bigquery.db_live_ritase_latest.orders` o
+
+left join `ritase-bigquery.db_live_ritase_latest.trips` trips on trips.id = o.trip_id
+left join `ritase-bigquery.db_live_ritase_latest.users` users on trips.driver_id = users.id  
+left join `ritase-bigquery.db_live_ritase_latest.companies`  c_shipper on c_shipper.id = o.company_shipper_id
+left join `ritase-bigquery.db_live_ritase_latest.companies` c_transport on c_transport.id = o.company_transport_id
+left join `ritase-bigquery.db_live_ritase_latest.vehicles` v on trips.vehicle_id = v.id
+left join `ritase-bigquery.db_live_ritase_latest.vehicle_type` v_t on v.type_id = v_t.id	
+left join `ritase-bigquery.db_live_ritase_latest.locations` ori on o.origin_id = ori.id
+left join `ritase-bigquery.db_live_ritase_latest.locations` dest on o.destination_id = dest.id
+left join `ritase-bigquery.db_live_ritase_latest.lotte_payments` lotpay on o.id = lotpay.order_id
+left join `ritase-bigquery.db_live_ritase_latest.order_status` s on s.id = o.status_id 
