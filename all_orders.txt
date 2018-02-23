@@ -1,12 +1,13 @@
 select
 o.ready_time,
-EXTRACT(MONTH from o.ready_time) as `Month`,
-EXTRACT(WEEK from o.ready_time) as `Week`,
-EXTRACT(YEAR from o.ready_time) as `Year`,
+EXTRACT(MONTH FROM o.ready_time) as `Month`,
+EXTRACT(WEEK FROM o.ready_time) as `Week`,
+EXTRACT(YEAR FROM o.ready_time) as `Year`,
 o.order_number,
+o.po_number,
 case when (c_transport.name like '%Lotte%') then 'LotteMart Wholesale'
     when (c_shipper.name like '%Samator%') then 'Samator'
-    when (c_shipper.name like '%Perffeti%') then 'Perffeti Van Melle'
+    when (c_shipper.name like '%Perfetti%') then 'Perfetti Van Melle'
     else 'others' end as Account,
 c_shipper.name as shipper,
 c_transport.name as transporter,
@@ -44,7 +45,7 @@ case
 		(
 			5000
 		)
-	when c_shipper.name like '%Perffeti%' then
+	when c_shipper.name like '%Perfetti%' then
 		(
 			15000
 		)
@@ -78,7 +79,7 @@ case
 		(
 			5000
 		)
-	when c_shipper.name like '%Perffeti%' then
+	when c_shipper.name like '%Perfetti%' then
 		(
 			15000
 		)
@@ -87,8 +88,14 @@ o.total_dimension,
 o.total_load,
 v_t.name as vehicleType,
 s.name as orderStatus,
-trips.status as statusTrip
-
+trips.status as statusTrip,
+case 
+  when c_transport.name like '%Lotte%' then 'Market Place'
+  when c_shipper.name like '%Samator%' then 'Direct Shipper'
+  when c_shipper.name like '%Perfetti%' then 'Direct Shipper'
+  else 'Direct Shipper' end as Stream
+  
+ 
 from `ritase-bigquery.db_live_ritase_latest.orders` o
 
 left join `ritase-bigquery.db_live_ritase_latest.trips` trips on trips.id = o.trip_id
@@ -100,4 +107,4 @@ left join `ritase-bigquery.db_live_ritase_latest.vehicle_type` v_t on v.type_id 
 left join `ritase-bigquery.db_live_ritase_latest.locations` ori on o.origin_id = ori.id
 left join `ritase-bigquery.db_live_ritase_latest.locations` dest on o.destination_id = dest.id
 left join `ritase-bigquery.db_live_ritase_latest.lotte_payments` lotpay on o.id = lotpay.order_id
-left join `ritase-bigquery.db_live_ritase_latest.order_status` s on s.id = o.status_id 
+left join `ritase-bigquery.db_live_ritase_latest.order_status` s on s.id = o.status_id
